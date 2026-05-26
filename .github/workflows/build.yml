@@ -1,0 +1,98 @@
+name: Build NATUN
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  release:
+    types: [created]
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        include:
+          - os: ubuntu-latest
+            goos: linux
+            goarch: amd64
+            suffix: ''
+          - os: macos-latest
+            goos: darwin
+            goarch: amd64
+            suffix: ''
+          - os: macos-latest
+            goos: darwin
+            goarch: arm64
+            suffix: '-arm64'
+          - os: windows-latest
+            goos: windows
+            goarch: amd64
+            suffix: '.exe'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Build client
+        run: |
+          cd udpclient
+          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -v -o natun-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }}
+
+      - name: Build server
+        run: |
+          cd udpcloud
+          CGO_ENABLED=0 GOOS=${{ matrix.goos }} GOARCH=${{ matrix.goarch }} go build -v -o server-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: |
+            udpclient/natun-*
+            udpcloud/server-*
+          retention-days: 30
+
+  release:
+    name: Create Release
+    if: github.event_name == 'release'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+          pattern: build-*
+
+      - name: List artifacts
+        run: ls -laR artifacts/
+
+      - name: Zip artifacts
+        run: |
+          for dir in artifacts/build-*; do
+            os_arch=$(basename "$dir" | sed 's/build-//')
+            cd "$dir"
+            zip -r "../../natun-${os_arch}.zip" .
+            cd ../../
+          done
+
+      - name: Upload Release Assets
+        uses: softprops/action-gh-release@v1
+        with:
+          files: natun-*.zip
