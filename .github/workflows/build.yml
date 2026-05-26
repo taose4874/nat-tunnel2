@@ -1,4 +1,4 @@
-name: Build NATUN (Windows Only)
+name: 构建 NATUN（仅 Windows）
 
 on:
   push:
@@ -10,19 +10,19 @@ on:
 
 jobs:
   build:
-    name: Build for Windows
+    name: 构建 Windows 版本
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: 检出代码
         uses: actions/checkout@v4
 
-      - name: Set up Go
+      - name: 配置 Go 环境
         uses: actions/setup-go@v5
         with:
           go-version: '1.22'
           cache: true
 
-      - name: Build client (Windows)
+      - name: 构建客户端（Windows）
         env:
           GOOS: windows
           GOARCH: amd64
@@ -31,7 +31,7 @@ jobs:
           cd udpclient
           go build -v -o natun-windows-amd64.exe
 
-      - name: Build server (Windows)
+      - name: 构建服务器（Windows）
         env:
           GOOS: windows
           GOARCH: amd64
@@ -40,7 +40,7 @@ jobs:
           cd udpcloud
           go build -v -o server-windows-amd64.exe
 
-      - name: Upload artifacts
+      - name: 上传构建产物
         uses: actions/upload-artifact@v4
         with:
           name: build-windows
@@ -50,7 +50,7 @@ jobs:
           retention-days: 30
 
   release:
-    name: Create Release
+    name: 创建发布
     if: github.event_name == 'release'
     needs: build
     runs-on: ubuntu-latest
@@ -58,24 +58,24 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout code
+      - name: 检出代码
         uses: actions/checkout@v4
 
-      - name: Download artifacts
+      - name: 下载构建产物
         uses: actions/download-artifact@v4
         with:
           name: build-windows
           path: artifacts/
 
-      - name: List artifacts
+      - name: 列出构建产物
         run: ls -la artifacts/
 
-      - name: Zip artifacts
+      - name: 打包压缩
         run: |
           cd artifacts
           zip -r ../natun-windows.zip .
 
-      - name: Upload Release Assets
+      - name: 上传发布文件
         uses: softprops/action-gh-release@v1
         with:
           files: natun-windows.zip
