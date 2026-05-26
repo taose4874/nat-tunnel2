@@ -1,0 +1,28 @@
+# Binaries
+natun
+server
+udpclient/natun
+udpclient/test*
+udpclient/bin/
+udpcloud/server
+udpcloud/test*
+udpcloud/bin/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Config files (user specific)
+*.json
+!go.mod
+!go.sum
+
+# Logs
+*.log
