@@ -1,4 +1,4 @@
-name: Build NATUN
+name: Build NATUN (Windows Only)
 
 on:
   push:
@@ -10,24 +10,8 @@ on:
 
 jobs:
   build:
-    name: Build for ${{ matrix.goos }}-${{ matrix.goarch }}
+    name: Build for Windows
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - goos: linux
-            goarch: amd64
-            suffix: ''
-          - goos: darwin
-            goarch: amd64
-            suffix: ''
-          - goos: darwin
-            goarch: arm64
-            suffix: '-arm64'
-          - goos: windows
-            goarch: amd64
-            suffix: '.exe'
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -38,31 +22,31 @@ jobs:
           go-version: '1.22'
           cache: true
 
-      - name: Build client
+      - name: Build client (Windows)
         env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
+          GOOS: windows
+          GOARCH: amd64
           CGO_ENABLED: 0
         run: |
           cd udpclient
-          go build -v -o natun-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }}
+          go build -v -o natun-windows-amd64.exe
 
-      - name: Build server
+      - name: Build server (Windows)
         env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
+          GOOS: windows
+          GOARCH: amd64
           CGO_ENABLED: 0
         run: |
           cd udpcloud
-          go build -v -o server-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.suffix }}
+          go build -v -o server-windows-amd64.exe
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: build-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: build-windows
           path: |
-            udpclient/natun-*
-            udpcloud/server-*
+            udpclient/natun-windows-amd64.exe
+            udpcloud/server-windows-amd64.exe
           retention-days: 30
 
   release:
@@ -77,25 +61,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download all artifacts
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
+          name: build-windows
           path: artifacts/
-          pattern: build-*
 
       - name: List artifacts
-        run: ls -laR artifacts/
+        run: ls -la artifacts/
 
       - name: Zip artifacts
         run: |
-          for dir in artifacts/build-*; do
-            os_arch=$(basename "$dir" | sed 's/build-//')
-            cd "$dir"
-            zip -r "../../natun-${os_arch}.zip" .
-            cd ../../
-          done
+          cd artifacts
+          zip -r ../natun-windows.zip .
 
       - name: Upload Release Assets
         uses: softprops/action-gh-release@v1
         with:
-          files: natun-*.zip
+          files: natun-windows.zip
